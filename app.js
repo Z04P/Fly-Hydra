@@ -90,6 +90,7 @@ function setup() {
     //position value of Y for pause button
     pauseBtnY = app.renderer.height / 1.162790697674419;
 
+    // initialize
     mainMenuScene = new Container();
     mmBtnContainer = new Container();
     aboutScene = new Container();
@@ -214,8 +215,19 @@ function setup() {
     player.y = halfOfRendererWidth;
     player.vx = 0;
     player.vy = 0;
-    playerMoveSpeed = 8;
+    playerMoveSpeed = 1.053;
     player.anchor.set(0.5, 0.5);
+    player.interactive = true;
+    player.buttonMode = true;
+
+    // android control support
+    // works with mouse too
+    // drag the player to move
+    player.on('pointerdown', onDragStart)
+          .on('pointerup', onDragEnd)
+          .on('pointerupoutside', onDragEnd)
+          .on('pointermove', onDragMove);
+
     minSpawnX = Math.round(w / 7.14);
     maxSpawnX = Math.round(w / 1.163);
     spawnY = 0;
@@ -250,53 +262,6 @@ function setup() {
     restartButtonContainer.addChild(restartButton, restartLabel, mmBtn, mmLabel);
     gameOverScene.addChild(endTitle, endScoreMultiplierLabel, endScoreLabel, gameOverLabel, restartButtonContainer);
     app.stage.addChild(gameOverScene, gameScene, pauseMenu, mainMenuScene, aboutScene);
-
-    //Capture the keyboard arrow keys
-    let left = keyboard("ArrowLeft"),
-        up = keyboard("ArrowUp"),
-        right = keyboard("ArrowRight"),
-        down = keyboard("ArrowDown");
-
-    //Left arrow key 'press' method
-    left.press = () => {
-        //Change player's velocity when pressed
-        player.vx -= playerMoveSpeed;
-        player.vy = 0;
-    };
-    //Left arrow key 'release' method
-    left.release = () => {
-        //If the left arrow has been released, and the right arrow isn't down,
-        //and the player isn't moving vertically:
-        //Stop the player
-        if (!right.isDown && player.vy === 0) player.vx = 0;
-    };
-
-    //Up
-    up.press = () => {
-        player.vx = 0;
-        player.vy -= playerMoveSpeed;
-    };
-    up.release = () => {
-        if (!down.isDown && player.vx === 0) player.vy = 0;
-    };
-
-    //Right
-    right.press = () => {
-        player.vx += playerMoveSpeed;
-        player.vy = 0;
-    };
-    right.release = () => {
-        if (!left.isDown && player.vy === 0) player.vx = 0;
-    };
-
-    //Down
-    down.press = () => {
-        player.vx = 0;
-        player.vy += playerMoveSpeed;
-    };
-    down.release = () => {
-        if (!up.isDown && player.vx === 0) player.vy = 0;
-    };
 
     //start the game upon pressing the play button
     mmBtnPlay.on('pointerdown', function(e) {
@@ -511,6 +476,51 @@ function spawnX(min, max) {
 
 }
 
+// android control support
+// works with mouse too
+// drag to move player
+function onDragStart(event) {
+
+    // store a reference to the data
+    // the reason for this is because of multitouch
+    // we want to track the movement of this particular touch
+    this.data = event.data;
+    // this.alpha = 0.5;
+    this.dragging = true;
+
+}
+
+function onDragEnd() {
+
+    // this.alpha = 1;
+    this.dragging = false;
+    // set the interaction data to null
+    this.data = null;
+
+}
+
+function onDragMove() {
+
+    if (this.dragging) {
+
+        var newPosition = this.data.getLocalPosition(this.parent);
+        var delta = 1;
+        var dt = playerMoveSpeed;
+        var dt = 1.0 - Math.exp(1.0 - dt, delta);
+
+        if (Math.abs(this.x - newPosition.x) + Math.abs(this.y - newPosition.y) < 1) {
+            this.x = newPosition.x;
+            this.y = newPosition.y;
+        } else {
+            this.x = this.x + (newPosition.x - this.x) * dt;
+            this.y = this.y + (newPosition.y - this.y) * dt;
+        }
+
+    }
+
+}
+
+
 function hitTestRectangle(r1, r2) {
 
     //Define the variables we'll need to calculate
@@ -560,54 +570,4 @@ function hitTestRectangle(r1, r2) {
   
     //`hit` will be either `true` or `false`
     return hit;
-  };
-
-function keyboard(value) {
-
-    let key = {};
-    key.value = value;
-    key.isDown = false;
-    key.isUp = true;
-    key.press = undefined;
-    key.release = undefined;
-
-    //The `downHandler`
-    key.downHandler = event => {
-        if (event.key === key.value) {
-            if (key.isUp && key.press) key.press();
-            key.isDown = true;
-            key.isUp = false;
-            event.preventDefault();
-        }
-    };
-
-    //The `upHandler`
-    key.upHandler = event => {
-        if (event.key === key.value) {
-            if (key.isDown && key.release) key.release();
-            key.isDown = false;
-            key.isUp = true;
-            event.preventDefault();
-        }
-    };
-
-    //Attach event listeners
-    const downListener = key.downHandler.bind(key);
-    const upListener = key.upHandler.bind(key);
-
-    window.addEventListener(
-        "keydown", downListener, false
-    );
-
-    window.addEventListener(
-        "keyup", upListener, false
-    );
-
-    // Detach event listeners
-    key.unsubscribe = () => {
-        window.removeEventListener("keydown", downListener);
-        window.removeEventListener("keyup", upListener);
-    };
-    
-    return key;
 }
