@@ -35,6 +35,8 @@ loader
     .add("enemy", "resources/sprite/enemy.png")
     .add("buttonRestart", "resources/sprite/restart-button.png")
     .add("buttonMenu", "resources/sprite/menu-button.png")
+    .add("resources/spritesheet/cloud.json")
+    .add("resources/spritesheet/road.json")
     .load(setup);
 
 //variable declaration
@@ -47,18 +49,21 @@ var gameScene, score, scoreMultiplier, enemy, enemyIsAlive, enemySize, minSpawnX
     gameOverScene;
 var mainMenuScene, aboutScene, pauseMenu, halfOfRendererWidth, menuTitleY, menuFirstBtnY, menuSecondBtnY,
     ingameTitleX, scoreMultiplierX, scoreX, topLabelY, pauseBtnLabelX, pauseBtnLabelY, pauseBtnX, pauseBtnY,
-    mmBtnY;
+    mmBtnY, minBoundX, maxBoundX, minBoundY, maxBoundY, cloudPosY;
 
 //initial setup for the whole app
 function setup() {
 
-    if (w <= 500 && h <= 500) {
+    let maxWidth = 500;
+    let maxHeight = 500;
+
+    if (w <= maxWidth && h <= maxHeight) {
         //don't do anything;
     } else {
 
-        app.renderer.resize(500, 500);
-        w = 500;
-        h = 500;
+        app.renderer.resize(maxWidth, maxHeight);
+        w = maxWidth;
+        h = maxHeight;
 
     }
 
@@ -89,7 +94,10 @@ function setup() {
     pauseBtnX = app.renderer.width / 8.333333333333333;
     //position value of Y for pause button
     pauseBtnY = app.renderer.height / 1.162790697674419;
+    //position value of Y for cloud
+    cloudPosY = Math.round(app.renderer.height / 7.14);
 
+    // initialize
     mainMenuScene = new Container();
     mmBtnContainer = new Container();
     aboutScene = new Container();
@@ -126,7 +134,7 @@ function setup() {
     mmAboutLabel = new Text("About", textStyle);
     mmAboutLabel.position.set(halfOfRendererWidth, menuSecondBtnY);
     mmAboutLabel.anchor.set(0.5, 0.5);
-    aboutParagraph = new Text("Fly Hydra/Flydra is a small project\nmade by /r/Z04p intended\nto develop his skills in Pixi JS.", textStyle);
+    aboutParagraph = new Text("Fly Hydra/Flydra is a small project\nmade by /r/Z04P intended\nto develop his skills in Pixi JS.", textStyle);
     aboutParagraph.position.set(halfOfRendererWidth, menuTitleY);
     aboutParagraph.anchor.set(0.5, 0.5);
     btnBackLabel = new Text("Back", textStyle);
@@ -214,8 +222,19 @@ function setup() {
     player.y = halfOfRendererWidth;
     player.vx = 0;
     player.vy = 0;
-    playerMoveSpeed = 8;
+    playerMoveSpeed = 1.053;
     player.anchor.set(0.5, 0.5);
+    player.interactive = true;
+    player.buttonMode = true;
+
+    // android control support
+    // works with mouse too
+    // drag the player to move
+    player.on('pointerdown', onDragStart)
+          .on('pointerup', onDragEnd)
+          .on('pointerupoutside', onDragEnd)
+          .on('pointermove', onDragMove);
+
     minSpawnX = Math.round(w / 7.14);
     maxSpawnX = Math.round(w / 1.163);
     spawnY = 0;
@@ -227,6 +246,37 @@ function setup() {
     enemy.vy = 0;
     enemyMoveSpeed = 3;
     enemy.anchor.set(0.5, 0.4);
+
+    // create an array of textures from an image path
+    var framesRoad = [];
+    var framesCloud = [];
+
+    for (var i = 0; i < 2; i++) {
+        var val = i < 10 ? '0' + i : i;
+
+        // magically works since the spritesheet was loaded with the pixi loader
+        framesRoad.push(PIXI.Texture.fromFrame('road0' + val + '.png'));
+        framesCloud.push(PIXI.Texture.fromFrame('cloud0' + val + '.png'));
+    }
+
+    // create an AnimatedSprite (brings back memories from the days of Flash, right ?)
+    var animRoad = new PIXI.extras.AnimatedSprite(framesRoad);
+    var animCloud = new PIXI.extras.AnimatedSprite(framesCloud);
+
+    /*
+     * An AnimatedSprite inherits all the properties of a PIXI sprite
+     * so you can change its position, its anchor, mask it, etc
+     */
+    animRoad.x = halfOfRendererWidth;
+    animRoad.y = maxHeight;
+    animRoad.anchor.set(0.5, 1);
+    animRoad.animationSpeed = 0.1;
+    animRoad.play();
+    animCloud.x = halfOfRendererWidth;
+    animCloud.y = cloudPosY;
+    animCloud.anchor.set(0.5, 0);
+    animCloud.animationSpeed = 0.02;
+    animCloud.play();
 
     restartButton.scale.set(0.8, 0.8);
     restartButton.position.set(halfOfRendererWidth, menuSecondBtnY);
@@ -245,58 +295,13 @@ function setup() {
     aboutScene.addChild(aboutBtnContainer, aboutParagraph);
     pauseMenuBtnContainer.addChild(continueBtn, continueBtnLabel, mmBtn_2, mmLabel_2);
     pauseMenu.addChild(pauseMenuBtnContainer, pauseMenuLabel);
+    gameScene.addChildAt(animCloud, 0);
+    gameScene.addChildAt(animRoad, 0);
     gameScene.addChild(title, scoreMultiplierLabel, scoreLabel, pauseButtonContainer, player);
     pauseButtonContainer.addChild(pauseButton, pauseButtonLabel);
     restartButtonContainer.addChild(restartButton, restartLabel, mmBtn, mmLabel);
     gameOverScene.addChild(endTitle, endScoreMultiplierLabel, endScoreLabel, gameOverLabel, restartButtonContainer);
     app.stage.addChild(gameOverScene, gameScene, pauseMenu, mainMenuScene, aboutScene);
-
-    //Capture the keyboard arrow keys
-    let left = keyboard("ArrowLeft"),
-        up = keyboard("ArrowUp"),
-        right = keyboard("ArrowRight"),
-        down = keyboard("ArrowDown");
-
-    //Left arrow key 'press' method
-    left.press = () => {
-        //Change player's velocity when pressed
-        player.vx -= playerMoveSpeed;
-        player.vy = 0;
-    };
-    //Left arrow key 'release' method
-    left.release = () => {
-        //If the left arrow has been released, and the right arrow isn't down,
-        //and the player isn't moving vertically:
-        //Stop the player
-        if (!right.isDown && player.vy === 0) player.vx = 0;
-    };
-
-    //Up
-    up.press = () => {
-        player.vx = 0;
-        player.vy -= playerMoveSpeed;
-    };
-    up.release = () => {
-        if (!down.isDown && player.vx === 0) player.vy = 0;
-    };
-
-    //Right
-    right.press = () => {
-        player.vx += playerMoveSpeed;
-        player.vy = 0;
-    };
-    right.release = () => {
-        if (!left.isDown && player.vy === 0) player.vx = 0;
-    };
-
-    //Down
-    down.press = () => {
-        player.vx = 0;
-        player.vy += playerMoveSpeed;
-    };
-    down.release = () => {
-        if (!up.isDown && player.vx === 0) player.vy = 0;
-    };
 
     //start the game upon pressing the play button
     mmBtnPlay.on('pointerdown', function(e) {
@@ -440,6 +445,33 @@ function play(delta) {
     player.x += player.vx;
     player.y += player.vy;
 
+    // min x = 70px | max x = 430px
+    // min y = 100px | max y = 400px
+    minBoundX = Math.round(app.renderer.width / 7.14);
+    maxBoundX = Math.round(app.renderer.width / 1.162);
+    minBoundY = Math.round(app.renderer.height / 5);
+    maxBoundY = Math.round(app.renderer.height / 1.25);
+
+    // stop player from going out of bounds
+    // horizontal axis
+    if (player.x <= minBoundX) {
+        player.vx = 0;
+        player.x = minBoundX;
+    } else if (player.x >= maxBoundX) {
+        player.vx = 0;
+        player.x = maxBoundX;
+    }
+    
+    // stop player from going out of bounds
+    // vertical axis
+    if (player.y <= minBoundY) {
+        player.vy = 0;
+        player.y = minBoundY;
+    } else if (player.y >= maxBoundY) {
+        player.vy = 0;
+        player.y = maxBoundY;
+    }
+
     //move the enemy along the y axis and increase its size
     //to create the 3d effect of a object getting closer
     //despawn when enemy is too close
@@ -463,7 +495,7 @@ function play(delta) {
     } else {
 
         enemyIsAlive = true;
-        gameScene.addChildAt(enemy, 0);
+        gameScene.addChildAt(enemy, 2);
 
     }
 
@@ -510,6 +542,51 @@ function spawnX(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
 
 }
+
+// android control support
+// works with mouse too
+// drag to move player
+function onDragStart(event) {
+
+    // store a reference to the data
+    // the reason for this is because of multitouch
+    // we want to track the movement of this particular touch
+    this.data = event.data;
+    // this.alpha = 0.5;
+    this.dragging = true;
+
+}
+
+function onDragEnd() {
+
+    // this.alpha = 1;
+    this.dragging = false;
+    // set the interaction data to null
+    this.data = null;
+
+}
+
+function onDragMove() {
+
+    if (this.dragging) {
+
+        var newPosition = this.data.getLocalPosition(this.parent);
+        var delta = 1;
+        var dt = playerMoveSpeed;
+        var dt = 1.0 - Math.exp(1.0 - dt, delta);
+
+        if (Math.abs(this.x - newPosition.x) + Math.abs(this.y - newPosition.y) < 1) {
+            this.x = newPosition.x;
+            this.y = newPosition.y;
+        } else {
+            this.x = this.x + (newPosition.x - this.x) * dt;
+            this.y = this.y + (newPosition.y - this.y) * dt;
+        }
+
+    }
+
+}
+
 
 function hitTestRectangle(r1, r2) {
 
@@ -560,54 +637,4 @@ function hitTestRectangle(r1, r2) {
   
     //`hit` will be either `true` or `false`
     return hit;
-  };
-
-function keyboard(value) {
-
-    let key = {};
-    key.value = value;
-    key.isDown = false;
-    key.isUp = true;
-    key.press = undefined;
-    key.release = undefined;
-
-    //The `downHandler`
-    key.downHandler = event => {
-        if (event.key === key.value) {
-            if (key.isUp && key.press) key.press();
-            key.isDown = true;
-            key.isUp = false;
-            event.preventDefault();
-        }
-    };
-
-    //The `upHandler`
-    key.upHandler = event => {
-        if (event.key === key.value) {
-            if (key.isDown && key.release) key.release();
-            key.isDown = false;
-            key.isUp = true;
-            event.preventDefault();
-        }
-    };
-
-    //Attach event listeners
-    const downListener = key.downHandler.bind(key);
-    const upListener = key.upHandler.bind(key);
-
-    window.addEventListener(
-        "keydown", downListener, false
-    );
-
-    window.addEventListener(
-        "keyup", upListener, false
-    );
-
-    // Detach event listeners
-    key.unsubscribe = () => {
-        window.removeEventListener("keydown", downListener);
-        window.removeEventListener("keyup", upListener);
-    };
-    
-    return key;
 }
