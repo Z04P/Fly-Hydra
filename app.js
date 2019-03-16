@@ -35,6 +35,8 @@ loader
     .add("enemy", "resources/sprite/enemy.png")
     .add("buttonRestart", "resources/sprite/restart-button.png")
     .add("buttonMenu", "resources/sprite/menu-button.png")
+    .add("resources/spritesheet/cloud.json")
+    .add("resources/spritesheet/road.json")
     .load(setup);
 
 //variable declaration
@@ -47,7 +49,7 @@ var gameScene, score, scoreMultiplier, enemy, enemyIsAlive, enemySize, minSpawnX
     gameOverScene;
 var mainMenuScene, aboutScene, pauseMenu, halfOfRendererWidth, menuTitleY, menuFirstBtnY, menuSecondBtnY,
     ingameTitleX, scoreMultiplierX, scoreX, topLabelY, pauseBtnLabelX, pauseBtnLabelY, pauseBtnX, pauseBtnY,
-    mmBtnY, minBoundX, maxBoundX, minBoundY, maxBoundY;
+    mmBtnY, minBoundX, maxBoundX, minBoundY, maxBoundY, cloudPosY;
 
 //initial setup for the whole app
 function setup() {
@@ -92,6 +94,8 @@ function setup() {
     pauseBtnX = app.renderer.width / 8.333333333333333;
     //position value of Y for pause button
     pauseBtnY = app.renderer.height / 1.162790697674419;
+    //position value of Y for cloud
+    cloudPosY = Math.round(app.renderer.height / 7.14);
 
     // initialize
     mainMenuScene = new Container();
@@ -243,6 +247,37 @@ function setup() {
     enemyMoveSpeed = 3;
     enemy.anchor.set(0.5, 0.4);
 
+    // create an array of textures from an image path
+    var framesRoad = [];
+    var framesCloud = [];
+
+    for (var i = 0; i < 2; i++) {
+        var val = i < 10 ? '0' + i : i;
+
+        // magically works since the spritesheet was loaded with the pixi loader
+        framesRoad.push(PIXI.Texture.fromFrame('road0' + val + '.png'));
+        framesCloud.push(PIXI.Texture.fromFrame('cloud0' + val + '.png'));
+    }
+
+    // create an AnimatedSprite (brings back memories from the days of Flash, right ?)
+    var animRoad = new PIXI.extras.AnimatedSprite(framesRoad);
+    var animCloud = new PIXI.extras.AnimatedSprite(framesCloud);
+
+    /*
+     * An AnimatedSprite inherits all the properties of a PIXI sprite
+     * so you can change its position, its anchor, mask it, etc
+     */
+    animRoad.x = halfOfRendererWidth;
+    animRoad.y = maxHeight;
+    animRoad.anchor.set(0.5, 1);
+    animRoad.animationSpeed = 0.1;
+    animRoad.play();
+    animCloud.x = halfOfRendererWidth;
+    animCloud.y = cloudPosY;
+    animCloud.anchor.set(0.5, 0);
+    animCloud.animationSpeed = 0.02;
+    animCloud.play();
+
     restartButton.scale.set(0.8, 0.8);
     restartButton.position.set(halfOfRendererWidth, menuSecondBtnY);
     restartButton.anchor.set(0.5, 0.5);
@@ -260,6 +295,8 @@ function setup() {
     aboutScene.addChild(aboutBtnContainer, aboutParagraph);
     pauseMenuBtnContainer.addChild(continueBtn, continueBtnLabel, mmBtn_2, mmLabel_2);
     pauseMenu.addChild(pauseMenuBtnContainer, pauseMenuLabel);
+    gameScene.addChildAt(animCloud, 0);
+    gameScene.addChildAt(animRoad, 0);
     gameScene.addChild(title, scoreMultiplierLabel, scoreLabel, pauseButtonContainer, player);
     pauseButtonContainer.addChild(pauseButton, pauseButtonLabel);
     restartButtonContainer.addChild(restartButton, restartLabel, mmBtn, mmLabel);
@@ -458,7 +495,7 @@ function play(delta) {
     } else {
 
         enemyIsAlive = true;
-        gameScene.addChildAt(enemy, 0);
+        gameScene.addChildAt(enemy, 2);
 
     }
 
