@@ -47,18 +47,21 @@ var gameScene, score, scoreMultiplier, enemy, enemyIsAlive, enemySize, minSpawnX
     gameOverScene;
 var mainMenuScene, aboutScene, pauseMenu, halfOfRendererWidth, menuTitleY, menuFirstBtnY, menuSecondBtnY,
     ingameTitleX, scoreMultiplierX, scoreX, topLabelY, pauseBtnLabelX, pauseBtnLabelY, pauseBtnX, pauseBtnY,
-    mmBtnY;
+    mmBtnY, minBoundX, maxBoundX, minBoundY, maxBoundY;
 
 //initial setup for the whole app
 function setup() {
 
-    if (w <= 500 && h <= 500) {
+    let maxWidth = 500;
+    let maxHeight = 500;
+
+    if (w <= maxWidth && h <= maxHeight) {
         //don't do anything;
     } else {
 
-        app.renderer.resize(500, 500);
-        w = 500;
-        h = 500;
+        app.renderer.resize(maxWidth, maxHeight);
+        w = maxWidth;
+        h = maxHeight;
 
     }
 
@@ -127,7 +130,7 @@ function setup() {
     mmAboutLabel = new Text("About", textStyle);
     mmAboutLabel.position.set(halfOfRendererWidth, menuSecondBtnY);
     mmAboutLabel.anchor.set(0.5, 0.5);
-    aboutParagraph = new Text("Fly Hydra/Flydra is a small project\nmade by /r/Z04p intended\nto develop his skills in Pixi JS.", textStyle);
+    aboutParagraph = new Text("Fly Hydra/Flydra is a small project\nmade by /r/Z04P intended\nto develop his skills in Pixi JS.", textStyle);
     aboutParagraph.position.set(halfOfRendererWidth, menuTitleY);
     aboutParagraph.anchor.set(0.5, 0.5);
     btnBackLabel = new Text("Back", textStyle);
@@ -404,6 +407,33 @@ function play(delta) {
     //use the player's velocity to make it move
     player.x += player.vx;
     player.y += player.vy;
+
+    // min x = 70px | max x = 430px
+    // min y = 100px | max y = 400px
+    minBoundX = Math.round(app.renderer.width / 7.14);
+    maxBoundX = Math.round(app.renderer.width / 1.162);
+    minBoundY = Math.round(app.renderer.height / 5);
+    maxBoundY = Math.round(app.renderer.height / 1.25);
+
+    // stop player from going out of bounds
+    // horizontal axis
+    if (player.x <= minBoundX) {
+        player.vx = 0;
+        player.x = minBoundX;
+    } else if (player.x >= maxBoundX) {
+        player.vx = 0;
+        player.x = maxBoundX;
+    }
+    
+    // stop player from going out of bounds
+    // vertical axis
+    if (player.y <= minBoundY) {
+        player.vy = 0;
+        player.y = minBoundY;
+    } else if (player.y >= maxBoundY) {
+        player.vy = 0;
+        player.y = maxBoundY;
+    }
 
     //move the enemy along the y axis and increase its size
     //to create the 3d effect of a object getting closer
