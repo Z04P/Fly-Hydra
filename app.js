@@ -10,10 +10,30 @@ const Application = PIXI.Application,
       Sprite = PIXI.Sprite,
       Rectangle = PIXI.Rectangle;
 
+//variable declaration
+// misc.
+var maxWidth, maxHeight, loadingContainer, loadingLabel, textStyle;
+let state, halfOfRendererWidth, menuTitleY, menuFirstBtnY, menuSecondBtnY,
+    ingameTitleX, scoreMultiplierX, scoreX, topLabelY, pauseBtnLabelX, pauseBtnLabelY, pauseBtnX, pauseBtnY,
+    mmBtnY, minBoundX, maxBoundX, minBoundY, maxBoundY, cloudPosY;
+// sound
+var bgm, crashSfx, buttonPressSfx, earnPointSfx, planeSfx;
+// in-game screen
+var gameScene, pauseMenu, score, scoreMultiplier, enemy, enemyIsAlive, enemySize, minSpawnX, maxSpawnX, spawnY;
+let title, scoreLabel, scoreMultiplierLabel, player, playerMoveSpeed, pauseButtonContainer, pauseButton,
+    pauseButtonLabel, pauseMenuBtnContainer, pauseMenuLabel, continueBtn, continueBtnLabel, mmBtn_2, mmLabel_2;
+// game over screen
+let gameOverScene, gameOverLabel, endTitle, endScoreLabel, endScoreMultiplierLabel, restartButtonContainerrestartButton, restartLabel;
+// main menu screen
+var mainMenuScene, aboutScene;
+let mmTitle, mmBtnContainer, mmBtnPlay, mmPlayLabel, mmBtnAbout, mmAboutLabel, mmBtn, mmLabel,
+    aboutParagraph, aboutBtnContainer, btnBack, btnBackLabel;
+
+// get browser's width and height
 let w = window.innerWidth;
 let h = window.innerHeight;
 
-//Create a Pixi Application
+//create a Pixi Application
 const app = new Application({
     width: w, 
     height: h,
@@ -22,81 +42,31 @@ const app = new Application({
     }
 );
 
-//Add the canvas that Pixi automatically created for you to the HTML document
+//add the canvas that Pixi automatically created for you to the HTML document
+// center app by making its parent the div container
 let container = document.getElementById("container");
 container.appendChild(app.view);
 
+// load texture and sound
 loadStuff();
 
-function loadStuff() {
-
-    sounds.load([
-        "sounds/music.wav",
-        "sounds/explosion.wav",
-        "sounds/shoot.wav",
-        "sounds/plane.wav",
-        "sounds/bounce.mp3"
-    ]);
-
-    sounds.whenLoaded = loadSprite;
-
-}
-
-function loadSprite() {
-
-    //load sprite and assign them a name
-    loader
-        .add("buttonPlay", "resources/sprite/play-button.png")
-        .add("buttonAbout", "resources/sprite/about-button.png")
-        .add("buttonPause", "resources/sprite/pause-button.png")
-        .add("player", "resources/sprite/player.png")
-        .add("enemy", "resources/sprite/enemy.png")
-        .add("buttonRestart", "resources/sprite/restart-button.png")
-        .add("buttonMenu", "resources/sprite/menu-button.png")
-        .add("resources/spritesheet/cloud.json")
-        .add("resources/spritesheet/road.json")
-        .load(setup);
-
-}
-
-//variable declaration
-let state, title, scoreLabel, scoreMultiplierLabel, gameOverLabel, textStyle, player, playerMoveSpeed,
-    endTitle, endScoreLabel, endScoreMultiplierLabel, restartButtonContainer, restartButton, restartLabel;
-let mmTitle, mmBtnContainer, mmBtnPlay, mmPlayLabel, mmBtnAbout, mmAboutLabel, mmBtn, mmLabel,
-    aboutParagraph, aboutBtnContainer, btnBack, btnBackLabel, pauseButtonContainer, pauseButton,
-    pauseButtonLabel, pauseMenuBtnContainer, pauseMenuLabel, continueBtn, continueBtnLabel, mmBtn_2, mmLabel_2;
-var gameScene, score, scoreMultiplier, enemy, enemyIsAlive, enemySize, minSpawnX, maxSpawnX, spawnY,
-    gameOverScene;
-var mainMenuScene, aboutScene, pauseMenu, halfOfRendererWidth, menuTitleY, menuFirstBtnY, menuSecondBtnY,
-    ingameTitleX, scoreMultiplierX, scoreX, topLabelY, pauseBtnLabelX, pauseBtnLabelY, pauseBtnX, pauseBtnY,
-    mmBtnY, minBoundX, maxBoundX, minBoundY, maxBoundY, cloudPosY, bgm, crashSfx, buttonPressSfx, earnPointSfx,
-    planeSfx;
-
-//initial setup for the whole app
+//this function sets the appropriate textures, sprites, sound, position, button events, etc.
 function setup() {
 
+    // assign appropriate sound
     bgm = sounds["sounds/music.wav"];
     crashSfx = sounds["sounds/explosion.wav"];
     buttonPressSfx = sounds["sounds/bounce.mp3"];
     earnPointSfx = sounds['sounds/shoot.wav'];
     planeSfx = sounds["sounds/plane.wav"];
+
+    // loop background music and plane engine sound (currently disabled)
     bgm.loop = true;
     planeSfx.loop = true;
+
+    // set the volume
     buttonPressSfx.volume = 0.6;
     planeSfx.volume = 0.2;
-
-    let maxWidth = 500;
-    let maxHeight = 500;
-
-    if (w <= maxWidth && h <= maxHeight) {
-        //don't do anything;
-    } else {
-
-        app.renderer.resize(maxWidth, maxHeight);
-        w = maxWidth;
-        h = maxHeight;
-
-    }
 
     //my attempt at making this responsive by converting to their % values
     //center value
@@ -128,7 +98,7 @@ function setup() {
     //position value of Y for cloud
     cloudPosY = Math.round(app.renderer.height / 9);
 
-    // initialize
+    // create scene
     mainMenuScene = new Container();
     mmBtnContainer = new Container();
     aboutScene = new Container();
@@ -139,23 +109,18 @@ function setup() {
     pauseMenuBtnContainer = new Container();
     gameOverScene = new Container();
     restartButtonContainer = new Container();
+
+    // hide unnecessary scene
     aboutScene.visible = false;
     pauseMenu.visible = false;
     gameScene.visible = false;
     gameOverScene.visible = false;
     restartButtonContainer.visible = false;
+    
     score = 0;
     scoreMultiplier = 1;
 
-    textStyle = new TextStyle({
-
-        fontFamily: "Arial",
-        fontSize: 18,
-        fill: "white",
-        fontWeight: "bold"
-
-    });
-
+    // setup for main menu
     mmTitle = new Text("Flydra", textStyle);
     mmTitle.position.set(halfOfRendererWidth, menuTitleY);
     mmTitle.anchor.set(0.5, 0.5);
@@ -165,12 +130,14 @@ function setup() {
     mmAboutLabel = new Text("About", textStyle);
     mmAboutLabel.position.set(halfOfRendererWidth, menuSecondBtnY);
     mmAboutLabel.anchor.set(0.5, 0.5);
-    aboutParagraph = new Text("Fly Hydra/Flydra is a small project\nmade by /u/Z04P intended\nto develop his skills in Pixi JS.", textStyle);
+    aboutParagraph = new Text("Red planes are out of control!\nDrag the blue plane to avoid crashing.\n\nFly Hydra/Flydra is a game\nmade by Z04P intended\nto develop his skills in Pixi JS.", textStyle);
     aboutParagraph.position.set(halfOfRendererWidth, menuTitleY);
     aboutParagraph.anchor.set(0.5, 0.5);
     btnBackLabel = new Text("Back", textStyle);
     btnBackLabel.position.set(halfOfRendererWidth, menuSecondBtnY);
     btnBackLabel.anchor.set(0.5, 0.5);
+
+    // setup for in-game scene
     title = new Text("Flydra", textStyle);
     title.position.set(ingameTitleX, topLabelY);
     scoreMultiplierLabel = new Text("x" + scoreMultiplier, textStyle);
@@ -189,6 +156,8 @@ function setup() {
     mmLabel_2 = new Text("Menu", textStyle);
     mmLabel_2.position.set(halfOfRendererWidth, menuSecondBtnY);
     mmLabel_2.anchor.set(0.5, 0.5);
+
+    // setup for game over scene
     endTitle = new Text("Flydra", textStyle);
     endTitle.position.set(ingameTitleX, topLabelY);
     endScoreMultiplierLabel = new Text("x" + scoreMultiplier, textStyle);
@@ -205,6 +174,7 @@ function setup() {
     mmLabel.position.set(halfOfRendererWidth, mmBtnY);
     mmLabel.anchor.set(0.5, 0.5);
 
+    // assign appropriate texture
     mmBtnPlay = new Sprite(resources.buttonPlay.texture);
     mmBtnAbout = new Sprite(resources.buttonAbout.texture);
     btnBack = new Sprite(resources.buttonMenu.texture);
@@ -216,6 +186,7 @@ function setup() {
     restartButton = new Sprite(resources.buttonRestart.texture);
     mmBtn = new Sprite(resources.buttonMenu.texture);
 
+    // setup for buttons in main menu
     mmBtnPlay.scale.set(0.8, 0.8);
     mmBtnPlay.position.set(halfOfRendererWidth, menuFirstBtnY);
     mmBtnPlay.anchor.set(0.5, 0.5);
@@ -232,6 +203,7 @@ function setup() {
     btnBack.interactive = true;
     btnBack.buttonMode = true;
 
+    // setup for buttons in pause menu
     pauseButton.scale.set(0.8, 0.8);
     pauseButton.position.set(pauseBtnX, pauseBtnY);
     pauseButton.anchor.set(0.5, 0.5);
@@ -248,6 +220,7 @@ function setup() {
     mmBtn_2.interactive = true;
     mmBtn_2.buttonMode = true;
 
+    // setup for the player
     player.scale.set(0.8, 0.8);
     player.x = halfOfRendererWidth;
     player.y = halfOfRendererWidth;
@@ -266,6 +239,8 @@ function setup() {
           .on('pointerupoutside', onDragEnd)
           .on('pointermove', onDragMove);
 
+    // setup for enemy
+    // i set a minSpawnX and maxSpawnX since the enemy needs to despawn and respawn
     minSpawnX = Math.round(w / 7.14);
     maxSpawnX = Math.round(w / 1.163);
     spawnY = 0;
@@ -278,39 +253,42 @@ function setup() {
     enemyMoveSpeed = 3;
     enemy.anchor.set(0.5, 0.5);
 
+    // animating the background
     // create an array of textures from an image path
     var framesRoad = [];
     var framesCloud = [];
 
-    for (var i = 0; i < 2; i++) {
+    // get frame from the spritesheet then push into the array
+    for (var i = 0; i < 8; i++) {
         var val = i < 10 ? '0' + i : i;
 
-        // magically works since the spritesheet was loaded with the pixi loader
-        framesRoad.push(PIXI.Texture.fromFrame('road0' + val + '.png'));
         framesCloud.push(PIXI.Texture.fromFrame('cloud0' + val + '.png'));
     }
 
-    // create an AnimatedSprite (brings back memories from the days of Flash, right ?)
+    // get frame from the spritesheet then push into the array
+    for (var i = 0; i < 3; i++) {
+        var val = i < 10 ? '0' + i : i;
+
+        framesRoad.push(PIXI.Texture.fromFrame('road0' + val + '.png'));
+    }
+
+    // create the animation for background
     var animRoad = new PIXI.extras.AnimatedSprite(framesRoad);
     var animCloud = new PIXI.extras.AnimatedSprite(framesCloud);
-
-    /*
-     * An AnimatedSprite inherits all the properties of a PIXI sprite
-     * so you can change its position, its anchor, mask it, etc
-     */
-    animRoad.scale.set(1, 1.3);
+    animRoad.scale.set(1, 1);
     animRoad.x = halfOfRendererWidth;
     animRoad.y = maxHeight;
     animRoad.anchor.set(0.5, 1);
-    animRoad.animationSpeed = 0.1;
+    animRoad.animationSpeed = 0.05;
     animRoad.play();
     animCloud.scale.set(1, 1);
     animCloud.x = halfOfRendererWidth;
-    animCloud.y = cloudPosY;
+    animCloud.y = 0;
     animCloud.anchor.set(0.5, 0);
     animCloud.animationSpeed = 0.02;
     animCloud.play();
 
+    // setup for buttons in game over screen
     restartButton.scale.set(0.8, 0.8);
     restartButton.position.set(halfOfRendererWidth, menuSecondBtnY);
     restartButton.anchor.set(0.5, 0.5);
@@ -322,6 +300,9 @@ function setup() {
     mmBtn.interactive = true;
     mmBtn.buttonMode = true;
 
+    // i decided to create a container for buttons since it's easier to hide/show a container 
+    // instead of having to hide/show each button
+    // i then add them to their respective scene
     mmBtnContainer.addChild(mmBtnPlay, mmPlayLabel, mmBtnAbout, mmAboutLabel);
     mainMenuScene.addChild(mmBtnContainer, mmTitle);
     aboutBtnContainer.addChild(btnBack, btnBackLabel);
@@ -334,6 +315,9 @@ function setup() {
     pauseButtonContainer.addChild(pauseButton, pauseButtonLabel);
     restartButtonContainer.addChild(restartButton, restartLabel, mmBtn, mmLabel);
     gameOverScene.addChild(endTitle, endScoreMultiplierLabel, endScoreLabel, gameOverLabel, restartButtonContainer);
+
+    // this loads all scene into the stage of our app
+    // removing this makes the stage empty which will result an empty screen
     app.stage.addChild(gameOverScene, gameScene, pauseMenu, mainMenuScene, aboutScene);
 
     //start the game upon pressing the play button
@@ -377,7 +361,6 @@ function setup() {
     });
 
     //pause the game upon pressing the pause button
-    //and bring up a pause menu
     pauseButton.on('pointerdown', function(e) {
 
         bgm.fadeOut(1);
@@ -475,229 +458,4 @@ function gameLoop(delta) {
     //update the current game state
     state(delta);
 
-}
-
-function menu() {
-    
-    //show the menu screen
-    mainMenuScene.visible = true;
-    gameScene.visible = false;
-    gameOverScene.visible = false;
-    restartButtonContainer.visible = false;
-
-}
-
-function pause() {
-
-    app.stop();
-
-}
-
-function play(delta) {
-
-    let rotationValue = 0.2;
-    let enemyVY = enemy.vy + enemyMoveSpeed;
-    let enemyY = enemy.y;
-    let despawnPoint = h;
-
-    //use the player's velocity to make it move
-    player.x += player.vx;
-    player.y += player.vy;
-
-    // min x = 70px | max x = 430px
-    // min y = 100px | max y = 400px
-    minBoundX = Math.round(app.renderer.width / 7.14);
-    maxBoundX = Math.round(app.renderer.width / 1.162);
-    minBoundY = Math.round(app.renderer.height / 5);
-    maxBoundY = Math.round(app.renderer.height / 1.25);
-
-    // stop player from going out of bounds
-    // horizontal axis
-    if (player.x <= minBoundX) {
-        player.vx = 0;
-        player.x = minBoundX;
-    } else if (player.x >= maxBoundX) {
-        player.vx = 0;
-        player.x = maxBoundX;
-    }
-    
-    // stop player from going out of bounds
-    // vertical axis
-    if (player.y <= minBoundY) {
-        player.vy = 0;
-        player.y = minBoundY;
-    } else if (player.y >= maxBoundY) {
-        player.vy = 0;
-        player.y = maxBoundY;
-    }
-
-    //move the enemy along the y axis and increase its size
-    //to create the 3d effect of a object getting closer
-    //despawn when enemy is too close
-    if (enemyY >= despawnPoint && enemyIsAlive === true) {
-
-        earnPointSfx.play();
-        scoreMultiplier += 0.5;
-        score += 100 * scoreMultiplier;
-        enemyIsAlive = false;
-        enemySize = 0.3;
-        enemy.scale.set(enemySize, enemySize);
-        enemy.x = spawnX(minSpawnX, maxSpawnX);
-        enemy.y = spawnY;
-        enemy.anchor.set(0.5, 0.4);
-        gameScene.removeChild(enemy);
-
-    } else if (enemyY < despawnPoint && enemyIsAlive === true) {
-        
-        enemy.y += enemyVY;
-        enemy.scale.set(enemySize += 0.003, enemySize += 0.003);
-
-    } else {
-
-        enemyIsAlive = true;
-        gameScene.addChildAt(enemy, 2);
-
-    }
-
-    scoreMultiplierLabel.text = "x" + scoreMultiplier;
-    scoreLabel.text = score;
-    endScoreMultiplierLabel.text = "x" + scoreMultiplier;
-    endScoreLabel.text = score;
-    
-    //check for collision between player and enemy
-    if (hitTestRectangle(player, enemy)) {
-
-        bgm.pause();
-        // planeSfx.pause();
-        crashSfx.play();
-
-        //if there's collision do these
-        player.rotation += rotationValue;
-        state = end;
-
-    }
-
-}
-
-function end() {
-
-    //launch the gameover scene
-    score = -100;
-    endScore = -100;
-    scoreMultiplier = 0.5;
-    endScoreMultiplier = 0.5;
-    player.x = halfOfRendererWidth;
-    player.y = halfOfRendererWidth;
-    enemy.y = 500;
-    enemyIsAlive = true;
-    gameScene.visible = false;
-    gameOverScene.visible = true;
-    restartButtonContainer.visible = true;
-
-}
-
-function spawnX(min, max) {
-
-    return Math.floor(Math.random() * (max - min)) + min;
-
-}
-
-// android control support
-// works with mouse too
-// drag to move player
-function onDragStart(event) {
-
-    // store a reference to the data
-    // the reason for this is because of multitouch
-    // we want to track the movement of this particular touch
-    this.data = event.data;
-    // this.alpha = 0.5;
-    this.dragging = true;
-
-}
-
-function onDragEnd() {
-
-    player.rotation = 0;
-    // this.alpha = 1;
-    this.dragging = false;
-    // set the interaction data to null
-    this.data = null;
-
-}
-
-function onDragMove() {
-
-    if (this.dragging) {
-
-        var newPosition = this.data.getLocalPosition(this.parent);
-        var delta = 1;
-        var dt = playerMoveSpeed;
-        var dt = 1.0 - Math.exp(1.0 - dt, delta);
-        var objectPosition = this.data.getLocalPosition(this);
-
-        if (Math.abs(this.x - newPosition.x) + Math.abs(this.y - newPosition.y) < 1) {
-            this.x = newPosition.x;
-            this.y = newPosition.y;
-        } else {
-            this.x = this.x + (newPosition.x - this.x) * dt;
-            this.y = this.y + (newPosition.y - this.y) * dt;
-        }
-
-        if (objectPosition.x < 0) player.rotation += -0.1;
-        else if (objectPosition.x > 0) player.rotation += 0.1;
-
-    }
-
-}
-
-function hitTestRectangle(r1, r2) {
-
-    //Define the variables we'll need to calculate
-    let hit, combinedHalfWidths, combinedHalfHeights, vx, vy;
-  
-    //hit will determine whether there's a collision
-    hit = false;
-  
-    //Find the center points of each sprite
-    r1.centerX = r1.x + r1.width / 2;
-    r1.centerY = r1.y + r1.height / 2;
-    r2.centerX = r2.x + r2.width / 2;
-    r2.centerY = r2.y + r2.height / 2;
-  
-    //Find the half-widths and half-heights of each sprite
-    r1.halfWidth = r1.width / 2;
-    r1.halfHeight = r1.height / 2;
-    r2.halfWidth = r2.width / 10;
-    r2.halfHeight = r2.height / 10;
-  
-    //Calculate the distance vector between the sprites
-    vx = r1.centerX - r2.centerX;
-    vy = r1.centerY - r2.centerY;
-  
-    //Figure out the combined half-widths and half-heights
-    combinedHalfWidths = r1.halfWidth + r2.halfWidth;
-    combinedHalfHeights = r1.halfHeight + r2.halfHeight;
-  
-    //Check for a collision on the x axis
-    if (Math.abs(vx) < combinedHalfWidths) {
-  
-      //A collision might be occurring. Check for a collision on the y axis
-      if (Math.abs(vy) < combinedHalfHeights) {
-  
-        //There's definitely a collision happening
-        hit = true;
-      } else {
-  
-        //There's no collision on the y axis
-        hit = false;
-      }
-    } else {
-  
-      //There's no collision on the x axis
-      hit = false;
-    }
-  
-    //`hit` will be either `true` or `false`
-    return hit;
 }
