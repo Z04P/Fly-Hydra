@@ -26,18 +26,38 @@ const app = new Application({
 let container = document.getElementById("container");
 container.appendChild(app.view);
 
-//load sprite and assign them a name
-loader
-    .add("buttonPlay", "resources/sprite/play-button.png")
-    .add("buttonAbout", "resources/sprite/about-button.png")
-    .add("buttonPause", "resources/sprite/pause-button.png")
-    .add("player", "resources/sprite/player.png")
-    .add("enemy", "resources/sprite/enemy.png")
-    .add("buttonRestart", "resources/sprite/restart-button.png")
-    .add("buttonMenu", "resources/sprite/menu-button.png")
-    .add("resources/spritesheet/cloud.json")
-    .add("resources/spritesheet/road.json")
-    .load(setup);
+loadStuff();
+
+function loadStuff() {
+
+    sounds.load([
+        "sounds/music.wav",
+        "sounds/explosion.wav",
+        "sounds/shoot.wav",
+        "sounds/plane.wav",
+        "sounds/bounce.mp3"
+    ]);
+
+    sounds.whenLoaded = loadSprite;
+
+}
+
+function loadSprite() {
+
+    //load sprite and assign them a name
+    loader
+        .add("buttonPlay", "resources/sprite/play-button.png")
+        .add("buttonAbout", "resources/sprite/about-button.png")
+        .add("buttonPause", "resources/sprite/pause-button.png")
+        .add("player", "resources/sprite/player.png")
+        .add("enemy", "resources/sprite/enemy.png")
+        .add("buttonRestart", "resources/sprite/restart-button.png")
+        .add("buttonMenu", "resources/sprite/menu-button.png")
+        .add("resources/spritesheet/cloud.json")
+        .add("resources/spritesheet/road.json")
+        .load(setup);
+
+}
 
 //variable declaration
 let state, title, scoreLabel, scoreMultiplierLabel, gameOverLabel, textStyle, player, playerMoveSpeed,
@@ -49,10 +69,21 @@ var gameScene, score, scoreMultiplier, enemy, enemyIsAlive, enemySize, minSpawnX
     gameOverScene;
 var mainMenuScene, aboutScene, pauseMenu, halfOfRendererWidth, menuTitleY, menuFirstBtnY, menuSecondBtnY,
     ingameTitleX, scoreMultiplierX, scoreX, topLabelY, pauseBtnLabelX, pauseBtnLabelY, pauseBtnX, pauseBtnY,
-    mmBtnY, minBoundX, maxBoundX, minBoundY, maxBoundY, cloudPosY;
+    mmBtnY, minBoundX, maxBoundX, minBoundY, maxBoundY, cloudPosY, bgm, crashSfx, buttonPressSfx, earnPointSfx,
+    planeSfx;
 
 //initial setup for the whole app
 function setup() {
+
+    bgm = sounds["sounds/music.wav"];
+    crashSfx = sounds["sounds/explosion.wav"];
+    buttonPressSfx = sounds["sounds/bounce.mp3"];
+    earnPointSfx = sounds['sounds/shoot.wav'];
+    planeSfx = sounds["sounds/plane.wav"];
+    bgm.loop = true;
+    planeSfx.loop = true;
+    buttonPressSfx.volume = 0.6;
+    planeSfx.volume = 0.2;
 
     let maxWidth = 500;
     let maxHeight = 500;
@@ -95,7 +126,7 @@ function setup() {
     //position value of Y for pause button
     pauseBtnY = app.renderer.height / 1.162790697674419;
     //position value of Y for cloud
-    cloudPosY = Math.round(app.renderer.height / 7.14);
+    cloudPosY = Math.round(app.renderer.height / 9);
 
     // initialize
     mainMenuScene = new Container();
@@ -134,7 +165,7 @@ function setup() {
     mmAboutLabel = new Text("About", textStyle);
     mmAboutLabel.position.set(halfOfRendererWidth, menuSecondBtnY);
     mmAboutLabel.anchor.set(0.5, 0.5);
-    aboutParagraph = new Text("Fly Hydra/Flydra is a small project\nmade by /r/Z04P intended\nto develop his skills in Pixi JS.", textStyle);
+    aboutParagraph = new Text("Fly Hydra/Flydra is a small project\nmade by /u/Z04P intended\nto develop his skills in Pixi JS.", textStyle);
     aboutParagraph.position.set(halfOfRendererWidth, menuTitleY);
     aboutParagraph.anchor.set(0.5, 0.5);
     btnBackLabel = new Text("Back", textStyle);
@@ -217,7 +248,7 @@ function setup() {
     mmBtn_2.interactive = true;
     mmBtn_2.buttonMode = true;
 
-    player.scale.set(0.4, 0.4);
+    player.scale.set(0.8, 0.8);
     player.x = halfOfRendererWidth;
     player.y = halfOfRendererWidth;
     player.vx = 0;
@@ -238,14 +269,14 @@ function setup() {
     minSpawnX = Math.round(w / 7.14);
     maxSpawnX = Math.round(w / 1.163);
     spawnY = 0;
-    enemySize = 0.1;
+    enemySize = 0.3;
     enemy.scale.set(enemySize, enemySize);
     enemy.x = spawnX(minSpawnX, maxSpawnX);
     enemy.y = spawnY;
     enemy.vx = 0;
     enemy.vy = 0;
     enemyMoveSpeed = 3;
-    enemy.anchor.set(0.5, 0.4);
+    enemy.anchor.set(0.5, 0.5);
 
     // create an array of textures from an image path
     var framesRoad = [];
@@ -267,11 +298,13 @@ function setup() {
      * An AnimatedSprite inherits all the properties of a PIXI sprite
      * so you can change its position, its anchor, mask it, etc
      */
+    animRoad.scale.set(1, 1.3);
     animRoad.x = halfOfRendererWidth;
     animRoad.y = maxHeight;
     animRoad.anchor.set(0.5, 1);
     animRoad.animationSpeed = 0.1;
     animRoad.play();
+    animCloud.scale.set(1, 1);
     animCloud.x = halfOfRendererWidth;
     animCloud.y = cloudPosY;
     animCloud.anchor.set(0.5, 0);
@@ -306,6 +339,10 @@ function setup() {
     //start the game upon pressing the play button
     mmBtnPlay.on('pointerdown', function(e) {
 
+        bgm.playFrom(0);
+        // planeSfx.playFrom(0);
+        buttonPressSfx.play();
+
         mainMenuScene.visible = false;
         gameScene.visible = true;
 
@@ -315,6 +352,8 @@ function setup() {
     
     //switch to about screen upon pressing the about button
     mmBtnAbout.on('pointerdown', function(e) {
+
+        buttonPressSfx.play();
 
         mainMenuScene.visible = false;
         mmTitle.visible = false;
@@ -326,6 +365,8 @@ function setup() {
 
     //switch to menu screen upon pressing the back button
     btnBack.on('pointerdown', function(e) {
+
+        buttonPressSfx.play();
 
         aboutScene.visible = false;
         aboutBtnContainer.visible = false;
@@ -339,6 +380,10 @@ function setup() {
     //and bring up a pause menu
     pauseButton.on('pointerdown', function(e) {
 
+        bgm.fadeOut(1);
+        // planeSfx.pause();
+        buttonPressSfx.play();
+
         state = pause;
         gameScene.visible = false;
         pauseMenu.visible = true;
@@ -348,6 +393,10 @@ function setup() {
 
     //continue the game upon pressing the continue button
     continueBtn.on('pointerdown', function(e) {
+
+        bgm.fadeIn(1);
+        // planeSfx.play();
+        buttonPressSfx.play();
 
         state = play;
         pauseMenu.visible = false;
@@ -359,6 +408,9 @@ function setup() {
 
     //return to the main menu upon pressing the menu button
     mmBtn_2.on('pointerdown', function(e) {
+
+        bgm.pause();
+        buttonPressSfx.play();
 
         score = -100;
         endScore = -100;
@@ -383,6 +435,10 @@ function setup() {
     //restart the game upon pressing the restart button
     restartButton.on('pointerdown', function(e) {
 
+        bgm.playFrom(0);
+        // planeSfx.playFrom(0);
+        buttonPressSfx.play();
+
         gameOverScene.visible = false;
         restartButtonContainer.visible = false;
         gameScene.visible = true;
@@ -394,6 +450,9 @@ function setup() {
     //return to the main menu upon pressing the menu button
     mmBtn.on('pointerdown', function(e) {
         
+        bgm.pause();
+        buttonPressSfx.play();
+
         gameOverScene.visible = false;
         restartButtonContainer.visible = false;
         gameScene.visible = false;
@@ -439,7 +498,7 @@ function play(delta) {
     let rotationValue = 0.2;
     let enemyVY = enemy.vy + enemyMoveSpeed;
     let enemyY = enemy.y;
-    let despawnPoint = h - 100;
+    let despawnPoint = h;
 
     //use the player's velocity to make it move
     player.x += player.vx;
@@ -477,10 +536,11 @@ function play(delta) {
     //despawn when enemy is too close
     if (enemyY >= despawnPoint && enemyIsAlive === true) {
 
+        earnPointSfx.play();
         scoreMultiplier += 0.5;
         score += 100 * scoreMultiplier;
         enemyIsAlive = false;
-        enemySize = 0.1;
+        enemySize = 0.3;
         enemy.scale.set(enemySize, enemySize);
         enemy.x = spawnX(minSpawnX, maxSpawnX);
         enemy.y = spawnY;
@@ -507,14 +567,13 @@ function play(delta) {
     //check for collision between player and enemy
     if (hitTestRectangle(player, enemy)) {
 
+        bgm.pause();
+        // planeSfx.pause();
+        crashSfx.play();
+
         //if there's collision do these
         player.rotation += rotationValue;
         state = end;
-
-    } else {
-
-        //if there's no collision do these
-        player.rotation = rotationValue * 0;
 
     }
 
@@ -559,6 +618,7 @@ function onDragStart(event) {
 
 function onDragEnd() {
 
+    player.rotation = 0;
     // this.alpha = 1;
     this.dragging = false;
     // set the interaction data to null
@@ -574,6 +634,7 @@ function onDragMove() {
         var delta = 1;
         var dt = playerMoveSpeed;
         var dt = 1.0 - Math.exp(1.0 - dt, delta);
+        var objectPosition = this.data.getLocalPosition(this);
 
         if (Math.abs(this.x - newPosition.x) + Math.abs(this.y - newPosition.y) < 1) {
             this.x = newPosition.x;
@@ -583,10 +644,12 @@ function onDragMove() {
             this.y = this.y + (newPosition.y - this.y) * dt;
         }
 
+        if (objectPosition.x < 0) player.rotation += -0.1;
+        else if (objectPosition.x > 0) player.rotation += 0.1;
+
     }
 
 }
-
 
 function hitTestRectangle(r1, r2) {
 
@@ -605,8 +668,8 @@ function hitTestRectangle(r1, r2) {
     //Find the half-widths and half-heights of each sprite
     r1.halfWidth = r1.width / 2;
     r1.halfHeight = r1.height / 2;
-    r2.halfWidth = r2.width / 6;
-    r2.halfHeight = r2.height / 6;
+    r2.halfWidth = r2.width / 10;
+    r2.halfHeight = r2.height / 10;
   
     //Calculate the distance vector between the sprites
     vx = r1.centerX - r2.centerX;
